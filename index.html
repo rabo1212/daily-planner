@@ -1,0 +1,1589 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>데일리 업무계획표 (팀 공유)</title>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
+
+    <!-- React -->
+    <script
+      crossorigin
+      src="https://unpkg.com/react@18/umd/react.production.min.js"
+    ></script>
+    <script
+      crossorigin
+      src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"
+    ></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      body {
+        font-family: "Noto Sans KR", sans-serif;
+        background: #f5f7fa;
+      }
+      #root {
+        width: 100%;
+        height: 100vh;
+      }
+      ::-webkit-scrollbar {
+        width: 8px;
+        height: 8px;
+      }
+      ::-webkit-scrollbar-track {
+        background: #f1f1f1;
+      }
+      ::-webkit-scrollbar-thumb {
+        background: #888;
+        border-radius: 4px;
+      }
+      ::-webkit-scrollbar-thumb:hover {
+        background: #555;
+      }
+      @keyframes fadeIn {
+        from {
+          opacity: 0;
+        }
+        to {
+          opacity: 1;
+        }
+      }
+      @keyframes slideUp {
+        from {
+          transform: translateY(20px);
+          opacity: 0;
+        }
+        to {
+          transform: translateY(0);
+          opacity: 1;
+        }
+      }
+      @keyframes spin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+      const { useState, useEffect } = React;
+
+      // ⭐⭐⭐ 여기에 Firebase 설정을 붙여넣으세요 ⭐⭐⭐
+      const firebaseConfig = {
+        apiKey: "AIzaSyBa7iRzgtdo71I1BlMOYJqdl-5yk1SE5PE",
+        authDomain: "daily-planner-dc99a.firebaseapp.com",
+        databaseURL:
+          "https://daily-planner-dc99a-default-rtdb.asia-southeast1.firebasedatabase.app",
+        projectId: "daily-planner-dc99a",
+        storageBucket: "daily-planner-dc99a.firebasestorage.app",
+        messagingSenderId: "383162342312",
+        appId: "1:383162342312:web:12184f16b2dc5488b29b9d",
+        measurementId: "G-35HH1DPHX5",
+      };
+
+      // Firebase 초기화
+      if (!firebase.apps.length) {
+        firebase.initializeApp(firebaseConfig);
+      }
+      const database = firebase.database();
+
+      // Icons
+      const Icon = ({ name, size = 24, color = "currentColor", ...props }) => {
+        const icons = {
+          plus: (
+            <path
+              d="M12 5v14m-7-7h14"
+              stroke={color}
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              fill="none"
+            />
+          ),
+          trash: (
+            <path
+              d="M3 6h18m-2 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"
+              stroke={color}
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              fill="none"
+            />
+          ),
+          calendar: (
+            <path
+              d="M8 2v4m8-4v4M3 10h18M5 4h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z"
+              stroke={color}
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              fill="none"
+            />
+          ),
+          user: (
+            <path
+              d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2m8-10a4 4 0 1 0 0-8 4 4 0 0 0 0 8z"
+              stroke={color}
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              fill="none"
+            />
+          ),
+          users: (
+            <path
+              d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2m22 0v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75M13 7a4 4 0 1 1-8 0 4 4 0 0 1 8 0z"
+              stroke={color}
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              fill="none"
+            />
+          ),
+          chevronRight: (
+            <path
+              d="m9 18 6-6-6-6"
+              stroke={color}
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              fill="none"
+            />
+          ),
+          chevronLeft: (
+            <path
+              d="m15 18-6-6 6-6"
+              stroke={color}
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              fill="none"
+            />
+          ),
+          refresh: (
+            <path
+              d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"
+              stroke={color}
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              fill="none"
+            />
+          ),
+        };
+        return (
+          <svg width={size} height={size} viewBox="0 0 24 24" {...props}>
+            {icons[name]}
+          </svg>
+        );
+      };
+
+      const DailyPlanner = () => {
+        const [projects, setProjects] = useState([]);
+        const [selectedProject, setSelectedProject] = useState(null);
+        const [currentWeek, setCurrentWeek] = useState(getWeekDates());
+        const [loading, setLoading] = useState(true);
+        const [userName, setUserName] = useState("");
+        const [showLoginModal, setShowLoginModal] = useState(true);
+        const [showProjectModal, setShowProjectModal] = useState(false);
+        const [showTaskModal, setShowTaskModal] = useState(false);
+        const [newProjectName, setNewProjectName] = useState("");
+        const [newTaskDescription, setNewTaskDescription] = useState("");
+        const [taskModalData, setTaskModalData] = useState(null);
+        const [lastSync, setLastSync] = useState(new Date());
+
+        const workHours = Array.from({ length: 10 }, (_, i) => i + 9);
+
+        useEffect(() => {
+          // Firebase 실시간 데이터 리스너
+          const projectsRef = database.ref("projects");
+
+          projectsRef.on("value", (snapshot) => {
+            const data = snapshot.val();
+            if (data) {
+              const projectsArray = Object.keys(data).map((key) => ({
+                id: key,
+                ...data[key],
+              }));
+              setProjects(projectsArray);
+              setLastSync(new Date());
+            } else {
+              setProjects([]);
+            }
+            setLoading(false);
+          });
+
+          // 자동 정리 (5일 이상 지난 업무)
+          const cleanupInterval = setInterval(() => {
+            cleanOldTasks();
+          }, 60000); // 1분마다 체크
+
+          return () => {
+            projectsRef.off();
+            clearInterval(cleanupInterval);
+          };
+        }, []);
+
+        useEffect(() => {
+          if (!userName) {
+            setShowLoginModal(true);
+          }
+        }, [userName]);
+
+        function cleanOldTasks() {
+          const fiveDaysAgo = new Date();
+          fiveDaysAgo.setDate(fiveDaysAgo.getDate() - 5);
+          fiveDaysAgo.setHours(0, 0, 0, 0);
+
+          projects.forEach((project) => {
+            const updatedTasks = project.tasks.filter((task) => {
+              const taskDate = new Date(task.date);
+              taskDate.setHours(0, 0, 0, 0);
+              return taskDate >= fiveDaysAgo;
+            });
+
+            if (updatedTasks.length !== project.tasks.length) {
+              database.ref(`projects/${project.id}/tasks`).set(updatedTasks);
+            }
+          });
+        }
+
+        function getWeekDates(baseDate = new Date()) {
+          const dates = [];
+          const dayOfWeek = baseDate.getDay();
+          const monday = new Date(baseDate);
+          monday.setDate(
+            baseDate.getDate() - (dayOfWeek === 0 ? 6 : dayOfWeek - 1)
+          );
+
+          for (let i = 0; i < 7; i++) {
+            const date = new Date(monday);
+            date.setDate(monday.getDate() + i);
+            dates.push(date);
+          }
+          return dates;
+        }
+
+        function goToPreviousWeek() {
+          const firstDay = currentWeek[0];
+          const previousWeek = new Date(firstDay);
+          previousWeek.setDate(firstDay.getDate() - 7);
+          setCurrentWeek(getWeekDates(previousWeek));
+        }
+
+        function goToNextWeek() {
+          const firstDay = currentWeek[0];
+          const nextWeek = new Date(firstDay);
+          nextWeek.setDate(firstDay.getDate() + 7);
+          setCurrentWeek(getWeekDates(nextWeek));
+        }
+
+        function goToCurrentWeek() {
+          setCurrentWeek(getWeekDates());
+        }
+
+        function addProject() {
+          setNewProjectName("");
+          setShowProjectModal(true);
+        }
+
+        async function handleAddProject() {
+          if (!newProjectName.trim()) return;
+
+          const newProject = {
+            name: newProjectName.trim(),
+            color: getRandomColor(),
+            tasks: [],
+            assignee: "",
+            createdAt: Date.now(),
+            createdBy: userName,
+          };
+
+          try {
+            const newProjectRef = database.ref("projects").push();
+            await newProjectRef.set(newProject);
+            setShowProjectModal(false);
+            setNewProjectName("");
+          } catch (error) {
+            alert("프로젝트 추가 실패: " + error.message);
+          }
+        }
+
+        async function deleteProject(projectId) {
+          if (!confirm("이 프로젝트를 삭제하시겠습니까?")) return;
+
+          try {
+            await database.ref(`projects/${projectId}`).remove();
+            if (selectedProject?.id === projectId) {
+              setSelectedProject(null);
+            }
+          } catch (error) {
+            alert("삭제 실패: " + error.message);
+          }
+        }
+
+        async function updateProjectAssignee(projectId, assignee) {
+          try {
+            await database.ref(`projects/${projectId}/assignee`).set(assignee);
+          } catch (error) {
+            console.error("담당자 업데이트 실패:", error);
+          }
+        }
+
+        function openTaskModal(projectId, date, hour) {
+          setTaskModalData({ projectId, date, hour });
+          setNewTaskDescription("");
+          setShowTaskModal(true);
+        }
+
+        async function handleAddTask() {
+          if (!newTaskDescription.trim() || !taskModalData) return;
+
+          const { projectId, date, hour } = taskModalData;
+
+          const task = {
+            id: Date.now(),
+            date: date.toISOString().split("T")[0],
+            hour,
+            description: newTaskDescription.trim(),
+            status: "pending",
+            createdBy: userName,
+            createdAt: Date.now(),
+          };
+
+          try {
+            const project = projects.find((p) => p.id === projectId);
+            const updatedTasks = [...(project.tasks || []), task];
+            await database.ref(`projects/${projectId}/tasks`).set(updatedTasks);
+
+            setShowTaskModal(false);
+            setNewTaskDescription("");
+            setTaskModalData(null);
+          } catch (error) {
+            alert("업무 추가 실패: " + error.message);
+          }
+        }
+
+        async function updateTask(projectId, taskId, updates) {
+          try {
+            const project = projects.find((p) => p.id === projectId);
+            const updatedTasks = project.tasks.map((t) =>
+              t.id === taskId ? { ...t, ...updates } : t
+            );
+            await database.ref(`projects/${projectId}/tasks`).set(updatedTasks);
+          } catch (error) {
+            console.error("업무 업데이트 실패:", error);
+          }
+        }
+
+        async function deleteTask(projectId, taskId) {
+          try {
+            const project = projects.find((p) => p.id === projectId);
+            const updatedTasks = project.tasks.filter((t) => t.id !== taskId);
+            await database.ref(`projects/${projectId}/tasks`).set(updatedTasks);
+          } catch (error) {
+            alert("업무 삭제 실패: " + error.message);
+          }
+        }
+
+        function getRandomColor() {
+          const colors = [
+            "#FF6B6B",
+            "#4ECDC4",
+            "#45B7D1",
+            "#FFA07A",
+            "#98D8C8",
+            "#F7DC6F",
+            "#BB8FCE",
+            "#85C1E2",
+            "#F8B739",
+            "#52B788",
+          ];
+          return colors[Math.floor(Math.random() * colors.length)];
+        }
+
+        function getTasksForDateAndHour(projectId, date, hour) {
+          const project = projects.find((p) => p.id === projectId);
+          if (!project || !project.tasks) return [];
+
+          const dateStr = date.toISOString().split("T")[0];
+          return project.tasks.filter(
+            (t) => t.date === dateStr && t.hour === hour
+          );
+        }
+
+        function getProjectProgress(project) {
+          if (!project.tasks || !project.tasks.length) return 0;
+          const completed = project.tasks.filter(
+            (t) => t.status === "completed"
+          ).length;
+          return Math.round((completed / project.tasks.length) * 100);
+        }
+
+        function handleLogin() {
+          if (!userName.trim()) {
+            alert("이름을 입력해주세요.");
+            return;
+          }
+          setShowLoginModal(false);
+        }
+
+        function formatLastSync() {
+          const now = new Date();
+          const diff = Math.floor((now - lastSync) / 1000);
+          if (diff < 60) return "방금 전";
+          if (diff < 3600) return `${Math.floor(diff / 60)}분 전`;
+          return lastSync.toLocaleTimeString("ko-KR", {
+            hour: "2-digit",
+            minute: "2-digit",
+          });
+        }
+
+        if (showLoginModal) {
+          return (
+            <div
+              style={{
+                minHeight: "100vh",
+                background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                padding: "20px",
+              }}
+            >
+              <div
+                style={{
+                  background: "white",
+                  borderRadius: "24px",
+                  padding: "48px",
+                  maxWidth: "440px",
+                  width: "100%",
+                  boxShadow: "0 20px 60px rgba(0,0,0,0.3)",
+                }}
+              >
+                <div
+                  style={{
+                    width: "64px",
+                    height: "64px",
+                    background:
+                      "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+                    borderRadius: "16px",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    marginBottom: "24px",
+                  }}
+                >
+                  <Icon name="calendar" size={32} color="white" />
+                </div>
+
+                <h1
+                  style={{
+                    fontSize: "28px",
+                    fontWeight: "700",
+                    marginBottom: "8px",
+                    color: "#1a1a1a",
+                  }}
+                >
+                  데일리 업무계획표
+                </h1>
+
+                <p
+                  style={{
+                    color: "#666",
+                    marginBottom: "32px",
+                    lineHeight: "1.6",
+                  }}
+                >
+                  팀 프로젝트를 실시간으로 관리하세요.
+                  <br />
+                  <strong style={{ color: "#667eea" }}>
+                    🔄 실시간 동기화 지원
+                  </strong>
+                </p>
+
+                <div style={{ marginBottom: "24px" }}>
+                  <label
+                    style={{
+                      display: "block",
+                      marginBottom: "8px",
+                      fontWeight: "600",
+                      color: "#333",
+                    }}
+                  >
+                    사용자 이름
+                  </label>
+                  <input
+                    type="text"
+                    value={userName}
+                    onChange={(e) => setUserName(e.target.value)}
+                    onKeyPress={(e) => e.key === "Enter" && handleLogin()}
+                    placeholder="홍길동"
+                    autoFocus
+                    style={{
+                      width: "100%",
+                      padding: "14px 16px",
+                      border: "2px solid #e0e0e0",
+                      borderRadius: "12px",
+                      fontSize: "16px",
+                      outline: "none",
+                    }}
+                  />
+                </div>
+
+                <button
+                  onClick={handleLogin}
+                  style={{
+                    width: "100%",
+                    padding: "16px",
+                    background:
+                      "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+                    color: "white",
+                    border: "none",
+                    borderRadius: "12px",
+                    fontSize: "16px",
+                    fontWeight: "600",
+                    cursor: "pointer",
+                    boxShadow: "0 4px 12px rgba(102, 126, 234, 0.4)",
+                  }}
+                >
+                  시작하기
+                </button>
+
+                <div
+                  style={{
+                    marginTop: "24px",
+                    padding: "16px",
+                    background: "#f0f7ff",
+                    borderRadius: "12px",
+                    fontSize: "13px",
+                    color: "#1e40af",
+                    border: "1px solid #bfdbfe",
+                  }}
+                >
+                  <Icon
+                    name="users"
+                    size={16}
+                    style={{ marginRight: "8px", verticalAlign: "middle" }}
+                  />
+                  Firebase 실시간 공유 버전입니다. 모든 팀원이 동시에 데이터를
+                  확인하고 수정할 수 있습니다.
+                </div>
+              </div>
+            </div>
+          );
+        }
+
+        if (loading) {
+          return (
+            <div
+              style={{
+                minHeight: "100vh",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                background: "#f5f7fa",
+              }}
+            >
+              <div style={{ textAlign: "center" }}>
+                <div
+                  style={{
+                    width: "48px",
+                    height: "48px",
+                    border: "4px solid #e0e0e0",
+                    borderTop: "4px solid #667eea",
+                    borderRadius: "50%",
+                    animation: "spin 1s linear infinite",
+                    margin: "0 auto 16px",
+                  }}
+                />
+                <p style={{ color: "#666" }}>데이터 로딩 중...</p>
+              </div>
+            </div>
+          );
+        }
+
+        return (
+          <div style={{ minHeight: "100vh", background: "#f5f7fa" }}>
+            {/* Header */}
+            <div
+              style={{
+                background: "white",
+                borderBottom: "1px solid #e5e7eb",
+                padding: "16px 32px",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                boxShadow: "0 1px 3px rgba(0,0,0,0.05)",
+              }}
+            >
+              <div
+                style={{ display: "flex", alignItems: "center", gap: "12px" }}
+              >
+                <div
+                  style={{
+                    width: "40px",
+                    height: "40px",
+                    background:
+                      "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+                    borderRadius: "10px",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                >
+                  <Icon name="calendar" size={22} color="white" />
+                </div>
+                <div>
+                  <h1
+                    style={{
+                      fontSize: "20px",
+                      fontWeight: "700",
+                      color: "#1a1a1a",
+                      margin: 0,
+                    }}
+                  >
+                    데일리 업무계획표
+                  </h1>
+                  <p
+                    style={{
+                      fontSize: "13px",
+                      color: "#666",
+                      margin: 0,
+                    }}
+                  >
+                    <Icon
+                      name="refresh"
+                      size={12}
+                      style={{ marginRight: "4px", verticalAlign: "middle" }}
+                    />
+                    마지막 동기화: {formatLastSync()}
+                  </p>
+                </div>
+              </div>
+
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "16px",
+                }}
+              >
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "8px",
+                    padding: "8px 16px",
+                    background: "#f8f9fa",
+                    borderRadius: "8px",
+                  }}
+                >
+                  <Icon name="user" size={16} color="#667eea" />
+                  <span style={{ fontSize: "14px", fontWeight: "500" }}>
+                    {userName}
+                  </span>
+                </div>
+
+                <button
+                  onClick={() => {
+                    setUserName("");
+                    setShowLoginModal(true);
+                  }}
+                  style={{
+                    padding: "8px 16px",
+                    background: "white",
+                    border: "1px solid #e0e0e0",
+                    borderRadius: "8px",
+                    fontSize: "14px",
+                    cursor: "pointer",
+                    color: "#666",
+                  }}
+                >
+                  로그아웃
+                </button>
+              </div>
+            </div>
+
+            <div style={{ display: "flex", height: "calc(100vh - 73px)" }}>
+              {/* Left Sidebar */}
+              <div
+                style={{
+                  width: "320px",
+                  background: "white",
+                  borderRight: "1px solid #e5e7eb",
+                  padding: "24px",
+                  overflowY: "auto",
+                }}
+              >
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    marginBottom: "20px",
+                  }}
+                >
+                  <h2
+                    style={{
+                      fontSize: "18px",
+                      fontWeight: "700",
+                      color: "#1a1a1a",
+                      margin: 0,
+                    }}
+                  >
+                    프로젝트 목록
+                  </h2>
+
+                  <button
+                    onClick={addProject}
+                    style={{
+                      width: "36px",
+                      height: "36px",
+                      background:
+                        "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+                      border: "none",
+                      borderRadius: "8px",
+                      cursor: "pointer",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      boxShadow: "0 2px 8px rgba(102, 126, 234, 0.3)",
+                    }}
+                  >
+                    <Icon name="plus" size={20} color="white" />
+                  </button>
+                </div>
+
+                {projects.length === 0 ? (
+                  <div
+                    style={{
+                      padding: "40px 20px",
+                      textAlign: "center",
+                      color: "#999",
+                    }}
+                  >
+                    <Icon
+                      name="calendar"
+                      size={48}
+                      color="#ddd"
+                      style={{ marginBottom: "12px" }}
+                    />
+                    <p>프로젝트를 추가해주세요</p>
+                  </div>
+                ) : (
+                  <div
+                    style={{
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: "12px",
+                    }}
+                  >
+                    {projects.map((project) => {
+                      const progress = getProjectProgress(project);
+                      const isSelected = selectedProject?.id === project.id;
+
+                      return (
+                        <div
+                          key={project.id}
+                          onClick={() => setSelectedProject(project)}
+                          style={{
+                            padding: "16px",
+                            background: isSelected ? "#f8f9ff" : "white",
+                            border: `2px solid ${
+                              isSelected ? project.color : "#e5e7eb"
+                            }`,
+                            borderRadius: "12px",
+                            cursor: "pointer",
+                            transition: "all 0.2s",
+                          }}
+                        >
+                          <div
+                            style={{
+                              display: "flex",
+                              justifyContent: "space-between",
+                              alignItems: "start",
+                              marginBottom: "12px",
+                            }}
+                          >
+                            <div style={{ flex: 1 }}>
+                              <div
+                                style={{
+                                  display: "flex",
+                                  alignItems: "center",
+                                  gap: "8px",
+                                  marginBottom: "8px",
+                                }}
+                              >
+                                <div
+                                  style={{
+                                    width: "8px",
+                                    height: "8px",
+                                    background: project.color,
+                                    borderRadius: "50%",
+                                  }}
+                                />
+                                <h3
+                                  style={{
+                                    fontSize: "15px",
+                                    fontWeight: "600",
+                                    color: "#1a1a1a",
+                                    margin: 0,
+                                  }}
+                                >
+                                  {project.name}
+                                </h3>
+                              </div>
+
+                              <input
+                                type="text"
+                                placeholder="담당자 입력"
+                                value={project.assignee || ""}
+                                onChange={(e) => {
+                                  e.stopPropagation();
+                                  updateProjectAssignee(
+                                    project.id,
+                                    e.target.value
+                                  );
+                                }}
+                                onClick={(e) => e.stopPropagation()}
+                                style={{
+                                  width: "100%",
+                                  padding: "6px 8px",
+                                  border: "1px solid #e5e7eb",
+                                  borderRadius: "6px",
+                                  fontSize: "13px",
+                                  outline: "none",
+                                }}
+                              />
+                            </div>
+
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                deleteProject(project.id);
+                              }}
+                              style={{
+                                background: "none",
+                                border: "none",
+                                cursor: "pointer",
+                                padding: "4px",
+                                opacity: 0.5,
+                              }}
+                            >
+                              <Icon name="trash" size={16} color="#ff4444" />
+                            </button>
+                          </div>
+
+                          <div style={{ marginTop: "12px" }}>
+                            <div
+                              style={{
+                                display: "flex",
+                                justifyContent: "space-between",
+                                fontSize: "12px",
+                                color: "#666",
+                                marginBottom: "6px",
+                              }}
+                            >
+                              <span>진행률</span>
+                              <span style={{ fontWeight: "600" }}>
+                                {progress}%
+                              </span>
+                            </div>
+                            <div
+                              style={{
+                                height: "6px",
+                                background: "#e5e7eb",
+                                borderRadius: "3px",
+                                overflow: "hidden",
+                              }}
+                            >
+                              <div
+                                style={{
+                                  width: `${progress}%`,
+                                  height: "100%",
+                                  background: project.color,
+                                  transition: "width 0.3s",
+                                }}
+                              />
+                            </div>
+                          </div>
+
+                          <div
+                            style={{
+                              marginTop: "8px",
+                              fontSize: "12px",
+                              color: "#999",
+                            }}
+                          >
+                            {project.tasks?.length || 0}개 업무
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+
+              {/* Right Panel */}
+              <div
+                style={{
+                  flex: 1,
+                  padding: "24px",
+                  overflowY: "auto",
+                }}
+              >
+                {!selectedProject ? (
+                  <div
+                    style={{
+                      height: "100%",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      flexDirection: "column",
+                      color: "#999",
+                    }}
+                  >
+                    <Icon
+                      name="chevronRight"
+                      size={64}
+                      color="#ddd"
+                      style={{ marginBottom: "16px" }}
+                    />
+                    <p style={{ fontSize: "18px" }}>
+                      왼쪽에서 프로젝트를 선택하세요
+                    </p>
+                  </div>
+                ) : (
+                  <div>
+                    <div
+                      style={{
+                        background: "white",
+                        padding: "20px 24px",
+                        borderRadius: "12px",
+                        marginBottom: "24px",
+                        boxShadow: "0 1px 3px rgba(0,0,0,0.05)",
+                      }}
+                    >
+                      <div
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "12px",
+                        }}
+                      >
+                        <div
+                          style={{
+                            width: "12px",
+                            height: "12px",
+                            background: selectedProject.color,
+                            borderRadius: "50%",
+                          }}
+                        />
+                        <h2
+                          style={{
+                            fontSize: "24px",
+                            fontWeight: "700",
+                            color: "#1a1a1a",
+                            margin: 0,
+                          }}
+                        >
+                          {selectedProject.name}
+                        </h2>
+                        {selectedProject.assignee && (
+                          <div
+                            style={{
+                              padding: "4px 12px",
+                              background: "#f8f9fa",
+                              borderRadius: "6px",
+                              fontSize: "13px",
+                              color: "#666",
+                            }}
+                          >
+                            담당: {selectedProject.assignee}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Week Navigation */}
+                    <div
+                      style={{
+                        background: "white",
+                        padding: "16px 24px",
+                        borderRadius: "12px",
+                        marginBottom: "16px",
+                        boxShadow: "0 1px 3px rgba(0,0,0,0.05)",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                      }}
+                    >
+                      <button
+                        onClick={goToPreviousWeek}
+                        style={{
+                          padding: "10px 20px",
+                          background: "#f8f9fa",
+                          border: "1px solid #e5e7eb",
+                          borderRadius: "10px",
+                          fontSize: "14px",
+                          fontWeight: "600",
+                          cursor: "pointer",
+                          color: "#495057",
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "8px",
+                        }}
+                      >
+                        <Icon name="chevronLeft" size={18} />
+                        이전 주
+                      </button>
+
+                      <div
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "16px",
+                        }}
+                      >
+                        <div
+                          style={{
+                            fontSize: "16px",
+                            fontWeight: "600",
+                            color: "#1a1a1a",
+                          }}
+                        >
+                          {currentWeek[0].toLocaleDateString("ko-KR", {
+                            year: "numeric",
+                            month: "long",
+                            day: "numeric",
+                          })}
+                          {" ~ "}
+                          {currentWeek[6].toLocaleDateString("ko-KR", {
+                            month: "long",
+                            day: "numeric",
+                          })}
+                        </div>
+
+                        <button
+                          onClick={goToCurrentWeek}
+                          style={{
+                            padding: "6px 16px",
+                            background:
+                              "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+                            border: "none",
+                            borderRadius: "8px",
+                            fontSize: "13px",
+                            fontWeight: "600",
+                            cursor: "pointer",
+                            color: "white",
+                            boxShadow: "0 2px 8px rgba(102, 126, 234, 0.3)",
+                          }}
+                        >
+                          이번 주
+                        </button>
+                      </div>
+
+                      <button
+                        onClick={goToNextWeek}
+                        style={{
+                          padding: "10px 20px",
+                          background: "#f8f9fa",
+                          border: "1px solid #e5e7eb",
+                          borderRadius: "10px",
+                          fontSize: "14px",
+                          fontWeight: "600",
+                          cursor: "pointer",
+                          color: "#495057",
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "8px",
+                        }}
+                      >
+                        다음 주
+                        <Icon name="chevronRight" size={18} />
+                      </button>
+                    </div>
+
+                    {/* Calendar */}
+                    <div
+                      style={{
+                        background: "white",
+                        borderRadius: "12px",
+                        overflow: "hidden",
+                        boxShadow: "0 1px 3px rgba(0,0,0,0.05)",
+                      }}
+                    >
+                      <div
+                        style={{
+                          display: "grid",
+                          gridTemplateColumns: "80px repeat(7, 1fr)",
+                          background: "#f8f9fa",
+                          borderBottom: "2px solid #e5e7eb",
+                        }}
+                      >
+                        <div
+                          style={{
+                            padding: "16px",
+                            borderRight: "1px solid #e5e7eb",
+                            fontSize: "13px",
+                            fontWeight: "600",
+                            color: "#666",
+                          }}
+                        >
+                          시간
+                        </div>
+                        {currentWeek.map((date, idx) => {
+                          const isToday =
+                            date.toDateString() === new Date().toDateString();
+                          const dayNames = [
+                            "일",
+                            "월",
+                            "화",
+                            "수",
+                            "목",
+                            "금",
+                            "토",
+                          ];
+
+                          return (
+                            <div
+                              key={idx}
+                              style={{
+                                padding: "16px 8px",
+                                textAlign: "center",
+                                borderRight:
+                                  idx < 6 ? "1px solid #e5e7eb" : "none",
+                                background: isToday
+                                  ? selectedProject.color
+                                  : "transparent",
+                                color: isToday ? "white" : "#1a1a1a",
+                              }}
+                            >
+                              <div
+                                style={{
+                                  fontSize: "12px",
+                                  fontWeight: "500",
+                                  opacity: isToday ? 1 : 0.7,
+                                  marginBottom: "4px",
+                                }}
+                              >
+                                {dayNames[date.getDay()]}
+                              </div>
+                              <div
+                                style={{
+                                  fontSize: "16px",
+                                  fontWeight: "700",
+                                }}
+                              >
+                                {date.getDate()}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+
+                      {workHours.map((hour) => (
+                        <div
+                          key={hour}
+                          style={{
+                            display: "grid",
+                            gridTemplateColumns: "80px repeat(7, 1fr)",
+                            borderBottom: "1px solid #e5e7eb",
+                          }}
+                        >
+                          <div
+                            style={{
+                              padding: "12px 16px",
+                              borderRight: "1px solid #e5e7eb",
+                              fontSize: "14px",
+                              fontWeight: "500",
+                              color: "#666",
+                              background: "#fafafa",
+                            }}
+                          >
+                            {hour}:00
+                          </div>
+
+                          {currentWeek.map((date, idx) => {
+                            const tasks = getTasksForDateAndHour(
+                              selectedProject.id,
+                              date,
+                              hour
+                            );
+
+                            return (
+                              <div
+                                key={idx}
+                                onClick={() =>
+                                  openTaskModal(selectedProject.id, date, hour)
+                                }
+                                style={{
+                                  padding: "8px",
+                                  borderRight:
+                                    idx < 6 ? "1px solid #e5e7eb" : "none",
+                                  minHeight: "60px",
+                                  cursor: "pointer",
+                                  background:
+                                    tasks.length > 0
+                                      ? `${selectedProject.color}10`
+                                      : "white",
+                                }}
+                              >
+                                {tasks.map((task) => (
+                                  <div
+                                    key={task.id}
+                                    onClick={(e) => e.stopPropagation()}
+                                    style={{
+                                      background: selectedProject.color,
+                                      color: "white",
+                                      padding: "6px 8px",
+                                      borderRadius: "6px",
+                                      fontSize: "12px",
+                                      marginBottom: "4px",
+                                      cursor: "default",
+                                    }}
+                                  >
+                                    <div
+                                      style={{
+                                        display: "flex",
+                                        justifyContent: "space-between",
+                                        alignItems: "start",
+                                        gap: "4px",
+                                      }}
+                                    >
+                                      <div
+                                        onClick={() => {
+                                          const newStatus =
+                                            task.status === "completed"
+                                              ? "pending"
+                                              : "completed";
+                                          updateTask(
+                                            selectedProject.id,
+                                            task.id,
+                                            { status: newStatus }
+                                          );
+                                        }}
+                                        style={{
+                                          flex: 1,
+                                          textDecoration:
+                                            task.status === "completed"
+                                              ? "line-through"
+                                              : "none",
+                                          opacity:
+                                            task.status === "completed"
+                                              ? 0.7
+                                              : 1,
+                                          cursor: "pointer",
+                                          wordBreak: "break-word",
+                                        }}
+                                      >
+                                        {task.description}
+                                      </div>
+                                      <button
+                                        onClick={() =>
+                                          deleteTask(
+                                            selectedProject.id,
+                                            task.id
+                                          )
+                                        }
+                                        style={{
+                                          background: "rgba(255,255,255,0.2)",
+                                          border: "none",
+                                          borderRadius: "4px",
+                                          cursor: "pointer",
+                                          padding: "2px",
+                                          display: "flex",
+                                          alignItems: "center",
+                                          justifyContent: "center",
+                                        }}
+                                      >
+                                        <Icon name="trash" size={12} />
+                                      </button>
+                                    </div>
+                                    {task.createdBy && (
+                                      <div
+                                        style={{
+                                          fontSize: "10px",
+                                          opacity: 0.8,
+                                          marginTop: "2px",
+                                        }}
+                                      >
+                                        작성: {task.createdBy}
+                                      </div>
+                                    )}
+                                  </div>
+                                ))}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Modals */}
+            {showProjectModal && (
+              <div
+                style={{
+                  position: "fixed",
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  background: "rgba(0,0,0,0.5)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  zIndex: 1000,
+                  animation: "fadeIn 0.2s",
+                }}
+                onClick={() => setShowProjectModal(false)}
+              >
+                <div
+                  style={{
+                    background: "white",
+                    borderRadius: "16px",
+                    padding: "32px",
+                    maxWidth: "480px",
+                    width: "90%",
+                    boxShadow: "0 20px 60px rgba(0,0,0,0.3)",
+                    animation: "slideUp 0.3s",
+                  }}
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <h2
+                    style={{
+                      fontSize: "24px",
+                      fontWeight: "700",
+                      marginBottom: "8px",
+                      color: "#1a1a1a",
+                    }}
+                  >
+                    새 프로젝트 추가
+                  </h2>
+                  <p
+                    style={{
+                      color: "#666",
+                      marginBottom: "24px",
+                      fontSize: "14px",
+                    }}
+                  >
+                    프로젝트 이름을 입력하세요
+                  </p>
+
+                  <input
+                    type="text"
+                    value={newProjectName}
+                    onChange={(e) => setNewProjectName(e.target.value)}
+                    onKeyPress={(e) => e.key === "Enter" && handleAddProject()}
+                    placeholder="예: 웹사이트 리뉴얼"
+                    autoFocus
+                    style={{
+                      width: "100%",
+                      padding: "14px 16px",
+                      border: "2px solid #e0e0e0",
+                      borderRadius: "12px",
+                      fontSize: "16px",
+                      marginBottom: "24px",
+                      outline: "none",
+                    }}
+                  />
+
+                  <div
+                    style={{
+                      display: "flex",
+                      gap: "12px",
+                      justifyContent: "flex-end",
+                    }}
+                  >
+                    <button
+                      onClick={() => setShowProjectModal(false)}
+                      style={{
+                        padding: "12px 24px",
+                        background: "#f1f3f5",
+                        border: "none",
+                        borderRadius: "10px",
+                        fontSize: "15px",
+                        fontWeight: "600",
+                        cursor: "pointer",
+                        color: "#666",
+                      }}
+                    >
+                      취소
+                    </button>
+                    <button
+                      onClick={handleAddProject}
+                      disabled={!newProjectName.trim()}
+                      style={{
+                        padding: "12px 24px",
+                        background: newProjectName.trim()
+                          ? "linear-gradient(135deg, #667eea 0%, #764ba2 100%)"
+                          : "#e0e0e0",
+                        border: "none",
+                        borderRadius: "10px",
+                        fontSize: "15px",
+                        fontWeight: "600",
+                        cursor: newProjectName.trim()
+                          ? "pointer"
+                          : "not-allowed",
+                        color: "white",
+                        boxShadow: newProjectName.trim()
+                          ? "0 4px 12px rgba(102, 126, 234, 0.3)"
+                          : "none",
+                      }}
+                    >
+                      추가하기
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {showTaskModal && taskModalData && (
+              <div
+                style={{
+                  position: "fixed",
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  background: "rgba(0,0,0,0.5)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  zIndex: 1000,
+                  animation: "fadeIn 0.2s",
+                }}
+                onClick={() => setShowTaskModal(false)}
+              >
+                <div
+                  style={{
+                    background: "white",
+                    borderRadius: "16px",
+                    padding: "32px",
+                    maxWidth: "480px",
+                    width: "90%",
+                    boxShadow: "0 20px 60px rgba(0,0,0,0.3)",
+                    animation: "slideUp 0.3s",
+                  }}
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <h2
+                    style={{
+                      fontSize: "24px",
+                      fontWeight: "700",
+                      marginBottom: "8px",
+                      color: "#1a1a1a",
+                    }}
+                  >
+                    새 업무 추가
+                  </h2>
+                  <p
+                    style={{
+                      color: "#666",
+                      marginBottom: "24px",
+                      fontSize: "14px",
+                    }}
+                  >
+                    {taskModalData.date.toLocaleDateString("ko-KR", {
+                      month: "long",
+                      day: "numeric",
+                    })}{" "}
+                    {taskModalData.hour}:00
+                  </p>
+
+                  <textarea
+                    value={newTaskDescription}
+                    onChange={(e) => setNewTaskDescription(e.target.value)}
+                    placeholder="업무 내용을 입력하세요"
+                    autoFocus
+                    style={{
+                      width: "100%",
+                      padding: "14px 16px",
+                      border: "2px solid #e0e0e0",
+                      borderRadius: "12px",
+                      fontSize: "16px",
+                      marginBottom: "24px",
+                      outline: "none",
+                      minHeight: "120px",
+                      resize: "vertical",
+                      fontFamily: "inherit",
+                    }}
+                  />
+
+                  <div
+                    style={{
+                      display: "flex",
+                      gap: "12px",
+                      justifyContent: "flex-end",
+                    }}
+                  >
+                    <button
+                      onClick={() => setShowTaskModal(false)}
+                      style={{
+                        padding: "12px 24px",
+                        background: "#f1f3f5",
+                        border: "none",
+                        borderRadius: "10px",
+                        fontSize: "15px",
+                        fontWeight: "600",
+                        cursor: "pointer",
+                        color: "#666",
+                      }}
+                    >
+                      취소
+                    </button>
+                    <button
+                      onClick={handleAddTask}
+                      disabled={!newTaskDescription.trim()}
+                      style={{
+                        padding: "12px 24px",
+                        background: newTaskDescription.trim()
+                          ? "linear-gradient(135deg, #667eea 0%, #764ba2 100%)"
+                          : "#e0e0e0",
+                        border: "none",
+                        borderRadius: "10px",
+                        fontSize: "15px",
+                        fontWeight: "600",
+                        cursor: newTaskDescription.trim()
+                          ? "pointer"
+                          : "not-allowed",
+                        color: "white",
+                        boxShadow: newTaskDescription.trim()
+                          ? "0 4px 12px rgba(102, 126, 234, 0.3)"
+                          : "none",
+                      }}
+                    >
+                      추가하기
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        );
+      };
+
+      ReactDOM.render(<DailyPlanner />, document.getElementById("root"));
+    </script>
+  </body>
+</html>

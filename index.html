@@ -568,113 +568,6 @@
         return lastSync.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' });
       }
 
-      if (showLoginModal) {
-        return (
-          <div style={{
-            minHeight: '100vh',
-            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            padding: '20px'
-          }}>
-            <div style={{
-              background: 'white',
-              borderRadius: '24px',
-              padding: '48px',
-              maxWidth: '440px',
-              width: '100%',
-              boxShadow: '0 20px 60px rgba(0,0,0,0.3)'
-            }}>
-              <div style={{
-                width: '64px',
-                height: '64px',
-                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                borderRadius: '16px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                marginBottom: '24px'
-              }}>
-                <Icon name="calendar" size={32} color="white" />
-              </div>
-              
-              <h1 style={{
-                fontSize: '28px',
-                fontWeight: '700',
-                marginBottom: '8px',
-                color: '#1a1a1a'
-              }}>데일리 업무계획표</h1>
-              
-              <p style={{
-                color: '#666',
-                marginBottom: '32px',
-                lineHeight: '1.6'
-              }}>
-                팀 프로젝트를 실시간으로 관리하세요.<br/>
-                <strong style={{ color: '#667eea' }}>🔄 실시간 동기화 지원</strong>
-              </p>
-
-              <div style={{ marginBottom: '24px' }}>
-                <label style={{
-                  display: 'block',
-                  marginBottom: '8px',
-                  fontWeight: '600',
-                  color: '#333'
-                }}>사용자 이름</label>
-                <input
-                  type="text"
-                  value={userName}
-                  onChange={(e) => setUserName(e.target.value)}
-                  onKeyPress={(e) => e.key === 'Enter' && handleLogin()}
-                  placeholder="홍길동"
-                  autoFocus
-                  style={{
-                    width: '100%',
-                    padding: '14px 16px',
-                    border: '2px solid #e0e0e0',
-                    borderRadius: '12px',
-                    fontSize: '16px',
-                    outline: 'none'
-                  }}
-                />
-              </div>
-
-              <button
-                onClick={handleLogin}
-                style={{
-                  width: '100%',
-                  padding: '16px',
-                  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '12px',
-                  fontSize: '16px',
-                  fontWeight: '600',
-                  cursor: 'pointer',
-                  boxShadow: '0 4px 12px rgba(102, 126, 234, 0.4)'
-                }}
-              >
-                시작하기
-              </button>
-
-              <div style={{
-                marginTop: '24px',
-                padding: '16px',
-                background: '#f0f7ff',
-                borderRadius: '12px',
-                fontSize: '13px',
-                color: '#1e40af',
-                border: '1px solid #bfdbfe'
-              }}>
-                <Icon name="users" size={16} style={{ marginRight: '8px', verticalAlign: 'middle' }} />
-                Firebase 실시간 공유 버전입니다. 새로고침해도 로그인 상태가 유지됩니다.
-              </div>
-            </div>
-          </div>
-        );
-      }
-
       if (loading) {
         return (
           <div style={{
@@ -704,6 +597,151 @@
               }}>
                 데이터 로딩 중...
               </p>
+            </div>
+          </div>
+        );
+      }
+
+      if (showLoginModal) {
+        return (
+          <div style={{
+            minHeight: '100vh',
+            background: 'linear-gradient(135deg, var(--color-mint-100) 0%, var(--color-lavender-100) 50%, var(--color-peach-100) 100%)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: 'var(--space-lg)',
+            animation: 'fadeIn 0.5s ease-out'
+          }}>
+            <div style={{
+              background: 'white',
+              borderRadius: 'var(--radius-2xl)',
+              padding: 'var(--space-3xl)',
+              maxWidth: '480px',
+              width: '100%',
+              boxShadow: 'var(--shadow-xl)',
+              animation: 'scaleIn 0.5s ease-out'
+            }}>
+              <div style={{
+                width: '80px',
+                height: '80px',
+                background: 'linear-gradient(135deg, var(--color-mint-400) 0%, var(--color-lavender-400) 100%)',
+                borderRadius: 'var(--radius-xl)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                marginBottom: 'var(--space-xl)'
+              }}>
+                <Icon name="calendar" size={40} color="white" />
+              </div>
+
+              <h1 style={{
+                fontFamily: 'var(--font-display)',
+                fontSize: '36px',
+                fontWeight: '800',
+                marginBottom: 'var(--space-sm)',
+                color: 'var(--color-gray-800)',
+                letterSpacing: '-0.02em'
+              }}>
+                데일리 업무계획표
+              </h1>
+
+              <p style={{
+                fontSize: '16px',
+                color: 'var(--color-gray-600)',
+                marginBottom: 'var(--space-xl)',
+                lineHeight: '1.7'
+              }}>
+                팀 프로젝트를 실시간으로 관리하세요
+                <br />
+                <span style={{ color: 'var(--color-mint-600)', fontWeight: '600' }}>
+                  ✨ 실시간 동기화 지원
+                </span>
+              </p>
+
+              <div style={{ marginBottom: 'var(--space-xl)' }}>
+                <label style={{
+                  display: 'block',
+                  marginBottom: 'var(--space-sm)',
+                  fontWeight: '600',
+                  color: 'var(--color-gray-700)',
+                  fontSize: '15px'
+                }}>
+                  사용자 이름
+                </label>
+                <input
+                  type="text"
+                  value={userName}
+                  onChange={(e) => setUserName(e.target.value)}
+                  onKeyPress={(e) => e.key === "Enter" && handleLogin()}
+                  placeholder="홍길동"
+                  autoFocus
+                  style={{
+                    width: '100%',
+                    padding: '16px 20px',
+                    border: '2px solid var(--color-gray-200)',
+                    borderRadius: 'var(--radius-lg)',
+                    fontSize: '16px',
+                    outline: 'none',
+                    transition: 'all 0.2s',
+                    fontFamily: 'var(--font-body)'
+                  }}
+                  onFocus={(e) => {
+                    e.target.style.borderColor = 'var(--color-mint-400)';
+                    e.target.style.boxShadow = '0 0 0 3px rgba(168, 230, 207, 0.1)';
+                  }}
+                  onBlur={(e) => {
+                    e.target.style.borderColor = 'var(--color-gray-200)';
+                    e.target.style.boxShadow = 'none';
+                  }}
+                />
+              </div>
+
+              <button
+                onClick={handleLogin}
+                style={{
+                  width: '100%',
+                  padding: '18px',
+                  background: 'linear-gradient(135deg, var(--color-mint-400) 0%, var(--color-mint-500) 100%)',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: 'var(--radius-lg)',
+                  fontSize: '17px',
+                  fontWeight: '700',
+                  cursor: 'pointer',
+                  boxShadow: '0 4px 14px rgba(20, 184, 166, 0.25)',
+                  transition: 'all 0.2s',
+                  fontFamily: 'var(--font-display)'
+                }}
+                onMouseEnter={(e) => {
+                  e.target.style.transform = 'translateY(-2px)';
+                  e.target.style.boxShadow = '0 6px 20px rgba(20, 184, 166, 0.35)';
+                }}
+                onMouseLeave={(e) => {
+                  e.target.style.transform = 'translateY(0)';
+                  e.target.style.boxShadow = '0 4px 14px rgba(20, 184, 166, 0.25)';
+                }}
+              >
+                시작하기 →
+              </button>
+
+              <div style={{
+                marginTop: 'var(--space-xl)',
+                padding: 'var(--space-lg)',
+                background: 'var(--color-mint-50)',
+                borderRadius: 'var(--radius-lg)',
+                fontSize: '14px',
+                color: 'var(--color-mint-700)',
+                border: '1px solid var(--color-mint-200)',
+                display: 'flex',
+                alignItems: 'start',
+                gap: 'var(--space-sm)'
+              }}>
+                <Icon name="users" size={18} color="var(--color-mint-600)" style={{ marginTop: '2px' }} />
+                <span style={{ flex: 1 }}>
+                  Firebase 실시간 공유 버전입니다. 새로고침해도 로그인 상태가 유지됩니다.
+                </span>
+              </div>
             </div>
           </div>
         );

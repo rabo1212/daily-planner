@@ -233,6 +233,8 @@
         const [userName, setUserName] = useState("");
         const [showLoginModal, setShowLoginModal] = useState(false);
         const [showProjectModal, setShowProjectModal] = useState(false);
+        const [showEditProjectModal, setShowEditProjectModal] = useState(false);
+        const [editingProject, setEditingProject] = useState(null);
         const [showTaskModal, setShowTaskModal] = useState(false);
         const [showMemoModal, setShowMemoModal] = useState(false);
         const [newProjectName, setNewProjectName] = useState("");
@@ -433,7 +435,31 @@
             alert("프로젝트 추가 실패: " + error.message);
           }
         }
+        async function handleEditProject() {
+          if (!newProjectName.trim()) {
+            alert("프로젝트 이름을 입력해주세요.");
+            return;
+          }
 
+          try {
+            await database.ref(`projects/${editingProject.id}`).update({
+              name: newProjectName.trim(),
+              organization: newProjectOrganization.trim(),
+              assignee: newProjectAssignee.trim(),
+              startDate: newProjectStartDate,
+              endDate: newProjectEndDate,
+            });
+            setShowEditProjectModal(false);
+            setEditingProject(null);
+            setNewProjectName("");
+            setNewProjectOrganization("");
+            setNewProjectAssignee("");
+            setNewProjectStartDate("");
+            setNewProjectEndDate("");
+          } catch (error) {
+            alert("프로젝트 수정 실패: " + error.message);
+          }
+        }
         async function deleteProject(projectId) {
           if (!confirm("이 프로젝트를 삭제하시겠습니까?")) return;
 
@@ -1096,7 +1122,29 @@
                                 </div>
                               )}
                             </div>
-
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setEditingProject(project);
+                                setNewProjectName(project.name);
+                                setNewProjectOrganization(
+                                  project.organization || ""
+                                );
+                                setNewProjectAssignee(project.assignee || "");
+                                setNewProjectStartDate(project.startDate || "");
+                                setNewProjectEndDate(project.endDate || "");
+                                setShowEditProjectModal(true);
+                              }}
+                              style={{
+                                background: "none",
+                                border: "none",
+                                cursor: "pointer",
+                                padding: "4px",
+                                opacity: 0.5,
+                              }}
+                            >
+                              <Icon name="edit" size={16} color="#667eea" />
+                            </button>
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
@@ -1112,8 +1160,9 @@
                             >
                               <Icon name="trash" size={16} color="#ff4444" />
                             </button>
+                            ``` --- ### 📸 구조: ``` 편집 버튼 (완전한 button)
+                            삭제 버튼 (완전한 button)
                           </div>
-
                           <div style={{ marginTop: "12px" }}>
                             <div
                               style={{
@@ -2430,7 +2479,257 @@
                 </div>
               </div>
             )}
+            {/* 프로젝트 편집 모달 */}
+            {showEditProjectModal && (
+              <div
+                style={{
+                  position: "fixed",
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  background: "rgba(0,0,0,0.5)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  zIndex: 1000,
+                  animation: "fadeIn 0.2s",
+                }}
+                onClick={() => setShowEditProjectModal(false)}
+              >
+                <div
+                  style={{
+                    background: "white",
+                    borderRadius: "16px",
+                    padding: "32px",
+                    maxWidth: "500px",
+                    width: "90%",
+                    maxHeight: "90vh",
+                    overflowY: "auto",
+                    boxShadow: "0 20px 60px rgba(0,0,0,0.3)",
+                    animation: "slideUp 0.3s",
+                  }}
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <h2
+                    style={{
+                      fontSize: "24px",
+                      fontWeight: "700",
+                      marginBottom: "8px",
+                      color: "#1a1a1a",
+                    }}
+                  >
+                    프로젝트 수정
+                  </h2>
+                  <p
+                    style={{
+                      color: "#666",
+                      marginBottom: "24px",
+                      fontSize: "14px",
+                    }}
+                  >
+                    프로젝트 정보를 수정하세요
+                  </p>
 
+                  <div style={{ marginBottom: "16px" }}>
+                    <label
+                      style={{
+                        display: "block",
+                        marginBottom: "8px",
+                        fontWeight: "600",
+                        color: "#333",
+                        fontSize: "14px",
+                      }}
+                    >
+                      프로젝트 이름 *
+                    </label>
+                    <input
+                      type="text"
+                      value={newProjectName}
+                      onChange={(e) => setNewProjectName(e.target.value)}
+                      placeholder="예: 웹사이트 리뉴얼"
+                      autoFocus
+                      style={{
+                        width: "100%",
+                        padding: "12px 14px",
+                        border: "2px solid #e0e0e0",
+                        borderRadius: "10px",
+                        fontSize: "15px",
+                        outline: "none",
+                      }}
+                    />
+                  </div>
+
+                  <div style={{ marginBottom: "16px" }}>
+                    <label
+                      style={{
+                        display: "block",
+                        marginBottom: "8px",
+                        fontWeight: "600",
+                        color: "#333",
+                        fontSize: "14px",
+                      }}
+                    >
+                      기관
+                    </label>
+                    <input
+                      type="text"
+                      value={newProjectOrganization}
+                      onChange={(e) =>
+                        setNewProjectOrganization(e.target.value)
+                      }
+                      placeholder="예: 디자인팀"
+                      style={{
+                        width: "100%",
+                        padding: "12px 14px",
+                        border: "2px solid #e0e0e0",
+                        borderRadius: "10px",
+                        fontSize: "15px",
+                        outline: "none",
+                      }}
+                    />
+                  </div>
+
+                  <div style={{ marginBottom: "16px" }}>
+                    <label
+                      style={{
+                        display: "block",
+                        marginBottom: "8px",
+                        fontWeight: "600",
+                        color: "#333",
+                        fontSize: "14px",
+                      }}
+                    >
+                      담당자
+                    </label>
+                    <input
+                      type="text"
+                      value={newProjectAssignee}
+                      onChange={(e) => setNewProjectAssignee(e.target.value)}
+                      placeholder="예: 김철수"
+                      style={{
+                        width: "100%",
+                        padding: "12px 14px",
+                        border: "2px solid #e0e0e0",
+                        borderRadius: "10px",
+                        fontSize: "15px",
+                        outline: "none",
+                      }}
+                    />
+                  </div>
+
+                  <div
+                    style={{
+                      display: "grid",
+                      gridTemplateColumns: "1fr 1fr",
+                      gap: "12px",
+                      marginBottom: "24px",
+                    }}
+                  >
+                    <div>
+                      <label
+                        style={{
+                          display: "block",
+                          marginBottom: "8px",
+                          fontWeight: "600",
+                          color: "#333",
+                          fontSize: "14px",
+                        }}
+                      >
+                        시작일
+                      </label>
+                      <input
+                        type="date"
+                        value={newProjectStartDate}
+                        onChange={(e) => setNewProjectStartDate(e.target.value)}
+                        style={{
+                          width: "100%",
+                          padding: "12px 14px",
+                          border: "2px solid #e0e0e0",
+                          borderRadius: "10px",
+                          fontSize: "15px",
+                          outline: "none",
+                        }}
+                      />
+                    </div>
+
+                    <div>
+                      <label
+                        style={{
+                          display: "block",
+                          marginBottom: "8px",
+                          fontWeight: "600",
+                          color: "#333",
+                          fontSize: "14px",
+                        }}
+                      >
+                        종료일
+                      </label>
+                      <input
+                        type="date"
+                        value={newProjectEndDate}
+                        onChange={(e) => setNewProjectEndDate(e.target.value)}
+                        style={{
+                          width: "100%",
+                          padding: "12px 14px",
+                          border: "2px solid #e0e0e0",
+                          borderRadius: "10px",
+                          fontSize: "15px",
+                          outline: "none",
+                        }}
+                      />
+                    </div>
+                  </div>
+
+                  <div
+                    style={{
+                      display: "flex",
+                      gap: "12px",
+                      justifyContent: "flex-end",
+                    }}
+                  >
+                    <button
+                      onClick={() => setShowEditProjectModal(false)}
+                      style={{
+                        padding: "12px 24px",
+                        background: "#f1f3f5",
+                        border: "none",
+                        borderRadius: "10px",
+                        fontSize: "15px",
+                        fontWeight: "600",
+                        cursor: "pointer",
+                        color: "#666",
+                      }}
+                    >
+                      취소
+                    </button>
+                    <button
+                      onClick={handleEditProject}
+                      disabled={!newProjectName.trim()}
+                      style={{
+                        padding: "12px 24px",
+                        background: newProjectName.trim()
+                          ? "linear-gradient(135deg, #667eea 0%, #764ba2 100%)"
+                          : "#e0e0e0",
+                        border: "none",
+                        borderRadius: "10px",
+                        fontSize: "15px",
+                        fontWeight: "600",
+                        cursor: newProjectName.trim()
+                          ? "pointer"
+                          : "not-allowed",
+                        color: "white",
+                        boxShadow: newProjectName.trim()
+                          ? "0 4px 12px rgba(102, 126, 234, 0.3)"
+                          : "none",
+                      }}
+                    >
+                      수정하기
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
             {showTaskModal && taskModalData && (
               <div
                 style={{
@@ -2763,4 +3062,3 @@
     </script>
   </body>
 </html>
-

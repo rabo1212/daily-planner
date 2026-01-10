@@ -2133,10 +2133,22 @@
                                   >
                                     <div
                                       style={{
-                                        display: "flex",
-                                        justifyContent: "space-between",
-                                        alignItems: "start",
-                                        gap: "4px",
+                                        background: selectedProject.color,
+                                        color: "white",
+                                        padding: "6px 8px",
+                                        borderRadius: "6px",
+                                        fontSize: "12px",
+                                        marginBottom: "4px",
+                                        cursor: "default",
+                                        minHeight:
+                                          task.startHour && task.endHour
+                                            ? `${
+                                                (task.endHour -
+                                                  task.startHour) *
+                                                  60 -
+                                                8
+                                              }px`
+                                            : "auto",
                                       }}
                                     >
                                       <div

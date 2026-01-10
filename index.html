@@ -2115,6 +2115,7 @@
                                     tasks.length > 0
                                       ? `${selectedProject.color}10`
                                       : "white",
+                                  position: "relative",
                                 }}
                               >
                                 {tasks.map((task) => (
@@ -2122,13 +2123,25 @@
                                     key={task.id}
                                     onClick={(e) => e.stopPropagation()}
                                     style={{
+                                      position: "absolute",
+                                      top: "8px",
+                                      left: "8px",
+                                      right: "8px",
                                       background: selectedProject.color,
                                       color: "white",
                                       padding: "6px 8px",
                                       borderRadius: "6px",
                                       fontSize: "12px",
-                                      marginBottom: "4px",
                                       cursor: "default",
+                                      height:
+                                        task.startHour && task.endHour
+                                          ? `${
+                                              (task.endHour - task.startHour) *
+                                                60 -
+                                              16
+                                            }px`
+                                          : "auto",
+                                      zIndex: 10,
                                     }}
                                   >
                                     <div

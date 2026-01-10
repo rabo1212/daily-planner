@@ -288,6 +288,8 @@
         const [taskMemo, setTaskMemo] = useState("");
         const [lastSync, setLastSync] = useState(new Date());
         const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
+        const [showMobileProjectList, setShowMobileProjectList] =
+          useState(false);
 
         useEffect(() => {
           const handleResize = () => {
@@ -1315,6 +1317,36 @@
                         월간 캘린더에서 날짜를 클릭하면 해당일의 상세 일정을
                         확인할 수 있습니다
                       </p>
+
+                      {/* 모바일 프로젝트 선택 버튼 */}
+                      {isMobile && (
+                        <button
+                          onClick={() =>
+                            setShowMobileProjectList(!showMobileProjectList)
+                          }
+                          style={{
+                            marginTop: "16px",
+                            width: "100%",
+                            padding: "12px 16px",
+                            background:
+                              "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+                            color: "white",
+                            border: "none",
+                            borderRadius: "10px",
+                            fontSize: "15px",
+                            fontWeight: "600",
+                            cursor: "pointer",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            gap: "8px",
+                            boxShadow: "0 2px 8px rgba(102, 126, 234, 0.3)",
+                          }}
+                        >
+                          <Icon name="chevronRight" size={18} />
+                          프로젝트 선택
+                        </button>
+                      )}
                     </div>
 
                     {/* Month Navigation */}
@@ -3138,6 +3170,271 @@
                       저장
                     </button>
                   </div>
+                </div>
+              </div>
+            )}
+
+            {/* 모바일 프로젝트 목록 모달 */}
+            {isMobile && showMobileProjectList && (
+              <div
+                style={{
+                  position: "fixed",
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  background: "rgba(0,0,0,0.5)",
+                  display: "flex",
+                  alignItems: "flex-end",
+                  justifyContent: "center",
+                  zIndex: 2000,
+                  animation: "fadeIn 0.2s",
+                }}
+                onClick={() => setShowMobileProjectList(false)}
+              >
+                <div
+                  style={{
+                    background: "white",
+                    borderRadius: "16px 16px 0 0",
+                    padding: "24px",
+                    width: "100%",
+                    maxHeight: "80vh",
+                    overflowY: "auto",
+                    boxShadow: "0 -4px 20px rgba(0,0,0,0.1)",
+                    animation: "slideUp 0.3s",
+                  }}
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <div
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      marginBottom: "20px",
+                    }}
+                  >
+                    <h2
+                      style={{
+                        fontSize: "20px",
+                        fontWeight: "700",
+                        color: "#1a1a1a",
+                        margin: 0,
+                      }}
+                    >
+                      프로젝트 선택
+                    </h2>
+                    <button
+                      onClick={() => setShowMobileProjectList(false)}
+                      style={{
+                        background: "none",
+                        border: "none",
+                        cursor: "pointer",
+                        padding: "8px",
+                      }}
+                    >
+                      <Icon name="x" size={24} color="#666" />
+                    </button>
+                  </div>
+
+                  {/* 프로젝트 추가 버튼 */}
+                  <button
+                    onClick={() => {
+                      setShowMobileProjectList(false);
+                      addProject();
+                    }}
+                    style={{
+                      width: "100%",
+                      padding: "12px 16px",
+                      background:
+                        "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+                      color: "white",
+                      border: "none",
+                      borderRadius: "10px",
+                      fontSize: "15px",
+                      fontWeight: "600",
+                      cursor: "pointer",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      gap: "8px",
+                      marginBottom: "16px",
+                      boxShadow: "0 2px 8px rgba(102, 126, 234, 0.3)",
+                    }}
+                  >
+                    <Icon name="plus" size={18} />새 프로젝트 추가
+                  </button>
+
+                  {projects.length === 0 ? (
+                    <div
+                      style={{
+                        padding: "40px 20px",
+                        textAlign: "center",
+                        color: "#999",
+                      }}
+                    >
+                      <p>프로젝트를 추가해주세요</p>
+                    </div>
+                  ) : (
+                    <div
+                      style={{
+                        display: "flex",
+                        flexDirection: "column",
+                        gap: "12px",
+                      }}
+                    >
+                      {projects.map((project) => {
+                        const progress = getProjectProgress(project);
+
+                        return (
+                          <div
+                            key={project.id}
+                            onClick={() => {
+                              setSelectedProject(project);
+                              setShowMobileProjectList(false);
+                            }}
+                            style={{
+                              padding: "16px",
+                              background: "white",
+                              border: `2px solid ${project.color}`,
+                              borderRadius: "12px",
+                              cursor: "pointer",
+                            }}
+                          >
+                            <div style={{ marginBottom: "12px" }}>
+                              <div
+                                style={{
+                                  display: "flex",
+                                  alignItems: "center",
+                                  gap: "8px",
+                                  marginBottom: "8px",
+                                }}
+                              >
+                                <div
+                                  style={{
+                                    width: "8px",
+                                    height: "8px",
+                                    background: project.color,
+                                    borderRadius: "50%",
+                                  }}
+                                />
+                                <h3
+                                  style={{
+                                    fontSize: "16px",
+                                    fontWeight: "600",
+                                    color: "#1a1a1a",
+                                    margin: 0,
+                                  }}
+                                >
+                                  {project.name}
+                                </h3>
+                              </div>
+
+                              {project.organization && (
+                                <div
+                                  style={{
+                                    fontSize: "13px",
+                                    color: "#666",
+                                    marginBottom: "4px",
+                                  }}
+                                >
+                                  <Icon
+                                    name="briefcase"
+                                    size={12}
+                                    style={{
+                                      marginRight: "4px",
+                                      verticalAlign: "middle",
+                                    }}
+                                  />
+                                  {project.organization}
+                                </div>
+                              )}
+
+                              {project.assignee && (
+                                <div
+                                  style={{
+                                    fontSize: "13px",
+                                    color: "#666",
+                                    marginBottom: "4px",
+                                  }}
+                                >
+                                  <Icon
+                                    name="user"
+                                    size={12}
+                                    style={{
+                                      marginRight: "4px",
+                                      verticalAlign: "middle",
+                                    }}
+                                  />
+                                  {project.assignee}
+                                </div>
+                              )}
+
+                              {project.startDate && project.endDate && (
+                                <div style={{ fontSize: "12px", color: "#666" }}>
+                                  <Icon
+                                    name="calendar"
+                                    size={12}
+                                    style={{
+                                      marginRight: "4px",
+                                      verticalAlign: "middle",
+                                    }}
+                                  />
+                                  {formatDateRange(
+                                    project.startDate,
+                                    project.endDate
+                                  )}
+                                </div>
+                              )}
+                            </div>
+
+                            <div>
+                              <div
+                                style={{
+                                  display: "flex",
+                                  justifyContent: "space-between",
+                                  fontSize: "12px",
+                                  color: "#666",
+                                  marginBottom: "6px",
+                                }}
+                              >
+                                <span>진행률</span>
+                                <span style={{ fontWeight: "600" }}>
+                                  {progress}%
+                                </span>
+                              </div>
+                              <div
+                                style={{
+                                  height: "6px",
+                                  background: "#e5e7eb",
+                                  borderRadius: "3px",
+                                  overflow: "hidden",
+                                }}
+                              >
+                                <div
+                                  style={{
+                                    width: `${progress}%`,
+                                    height: "100%",
+                                    background: project.color,
+                                    transition: "width 0.3s",
+                                  }}
+                                />
+                              </div>
+                            </div>
+
+                            <div
+                              style={{
+                                marginTop: "8px",
+                                fontSize: "12px",
+                                color: "#999",
+                              }}
+                            >
+                              {project.tasks?.length || 0}개 업무
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
               </div>
             )}

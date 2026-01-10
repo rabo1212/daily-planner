@@ -1399,24 +1399,6 @@
                           {currentMonth.getFullYear()}년{" "}
                           {currentMonth.getMonth() + 1}월
                         </div>
-
-                        <button
-                          onClick={goToCurrentMonth}
-                          style={{
-                            padding: "6px 16px",
-                            background:
-                              "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-                            border: "none",
-                            borderRadius: "8px",
-                            fontSize: "13px",
-                            fontWeight: "600",
-                            cursor: "pointer",
-                            color: "white",
-                            boxShadow: "0 2px 8px rgba(102, 126, 234, 0.3)",
-                          }}
-                        >
-                          이번 달
-                        </button>
                       </div>
 
                       <button
@@ -3370,7 +3352,9 @@
                               )}
 
                               {project.startDate && project.endDate && (
-                                <div style={{ fontSize: "12px", color: "#666" }}>
+                                <div
+                                  style={{ fontSize: "12px", color: "#666" }}
+                                >
                                   <Icon
                                     name="calendar"
                                     size={12}

@@ -185,6 +185,26 @@
               fill="none"
             />
           ),
+          edit: (
+            <path
+              d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"
+              stroke={color}
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              fill="none"
+            />
+          ),
+          x: (
+            <path
+              d="M18 6 6 18M6 6l12 12"
+              stroke={color}
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              fill="none"
+            />
+          ),
         };
         return (
           <svg width={size} height={size} viewBox="0 0 24 24" {...props}>
@@ -197,19 +217,33 @@
         const [projects, setProjects] = useState([]);
         const [selectedProject, setSelectedProject] = useState(null);
         const [currentWeek, setCurrentWeek] = useState(getWeekDates());
+        const [currentMonth, setCurrentMonth] = useState(new Date());
+        const [selectedDate, setSelectedDate] = useState(null);
         const [loading, setLoading] = useState(true);
         const [userName, setUserName] = useState("");
-        const [showLoginModal, setShowLoginModal] = useState(true);
+        const [showLoginModal, setShowLoginModal] = useState(false);
         const [showProjectModal, setShowProjectModal] = useState(false);
         const [showTaskModal, setShowTaskModal] = useState(false);
+        const [showMemoModal, setShowMemoModal] = useState(false);
         const [newProjectName, setNewProjectName] = useState("");
         const [newTaskDescription, setNewTaskDescription] = useState("");
         const [taskModalData, setTaskModalData] = useState(null);
+        const [selectedTask, setSelectedTask] = useState(null);
+        const [taskMemo, setTaskMemo] = useState("");
         const [lastSync, setLastSync] = useState(new Date());
 
         const workHours = Array.from({ length: 10 }, (_, i) => i + 9);
 
         useEffect(() => {
+          // 로컬스토리지에서 사용자 이름 복구
+          const savedUserName = localStorage.getItem("daily-planner-username");
+          if (savedUserName) {
+            setUserName(savedUserName);
+            setShowLoginModal(false);
+          } else {
+            setShowLoginModal(true);
+          }
+
           // Firebase 실시간 데이터 리스너
           const projectsRef = database.ref("projects");
 
@@ -228,22 +262,16 @@
             setLoading(false);
           });
 
-          // 자동 정리 (5일 이상 지난 업무)
+          // 자동 정리
           const cleanupInterval = setInterval(() => {
             cleanOldTasks();
-          }, 60000); // 1분마다 체크
+          }, 60000);
 
           return () => {
             projectsRef.off();
             clearInterval(cleanupInterval);
           };
         }, []);
-
-        useEffect(() => {
-          if (!userName) {
-            setShowLoginModal(true);
-          }
-        }, [userName]);
 
         function cleanOldTasks() {
           const fiveDaysAgo = new Date();
@@ -279,6 +307,41 @@
           return dates;
         }
 
+        function getMonthDates(date) {
+          const year = date.getFullYear();
+          const month = date.getMonth();
+          const firstDay = new Date(year, month, 1);
+          const lastDay = new Date(year, month + 1, 0);
+
+          const dates = [];
+          const startDay = firstDay.getDay();
+
+          // 이전 달 날짜
+          for (let i = startDay - 1; i >= 0; i--) {
+            const d = new Date(year, month, -i);
+            dates.push({ date: d, isCurrentMonth: false });
+          }
+
+          // 현재 달 날짜
+          for (let i = 1; i <= lastDay.getDate(); i++) {
+            dates.push({
+              date: new Date(year, month, i),
+              isCurrentMonth: true,
+            });
+          }
+
+          // 다음 달 날짜 (6주 채우기)
+          const remaining = 42 - dates.length;
+          for (let i = 1; i <= remaining; i++) {
+            dates.push({
+              date: new Date(year, month + 1, i),
+              isCurrentMonth: false,
+            });
+          }
+
+          return dates;
+        }
+
         function goToPreviousWeek() {
           const firstDay = currentWeek[0];
           const previousWeek = new Date(firstDay);
@@ -295,6 +358,22 @@
 
         function goToCurrentWeek() {
           setCurrentWeek(getWeekDates());
+        }
+
+        function goToPreviousMonth() {
+          setCurrentMonth(
+            new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1)
+          );
+        }
+
+        function goToNextMonth() {
+          setCurrentMonth(
+            new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1)
+          );
+        }
+
+        function goToCurrentMonth() {
+          setCurrentMonth(new Date());
         }
 
         function addProject() {
@@ -362,6 +441,7 @@
             hour,
             description: newTaskDescription.trim(),
             status: "pending",
+            memo: "",
             createdBy: userName,
             createdAt: Date.now(),
           };
@@ -401,6 +481,27 @@
           }
         }
 
+        function openMemoModal(projectId, task) {
+          setSelectedTask({ projectId, task });
+          setTaskMemo(task.memo || "");
+          setShowMemoModal(true);
+        }
+
+        async function handleSaveMemo() {
+          if (!selectedTask) return;
+
+          try {
+            await updateTask(selectedTask.projectId, selectedTask.task.id, {
+              memo: taskMemo,
+            });
+            setShowMemoModal(false);
+            setSelectedTask(null);
+            setTaskMemo("");
+          } catch (error) {
+            alert("메모 저장 실패: " + error.message);
+          }
+        }
+
         function getRandomColor() {
           const colors = [
             "#FF6B6B",
@@ -427,6 +528,16 @@
           );
         }
 
+        function getTasksForDate(date) {
+          const dateStr = date.toISOString().split("T")[0];
+          return projects.flatMap((project) => {
+            const projectTasks = (project.tasks || []).filter(
+              (t) => t.date === dateStr
+            );
+            return projectTasks.map((task) => ({ ...task, project }));
+          });
+        }
+
         function getProjectProgress(project) {
           if (!project.tasks || !project.tasks.length) return 0;
           const completed = project.tasks.filter(
@@ -440,7 +551,15 @@
             alert("이름을 입력해주세요.");
             return;
           }
+          // 로컬스토리지에 저장
+          localStorage.setItem("daily-planner-username", userName.trim());
           setShowLoginModal(false);
+        }
+
+        function handleLogout() {
+          localStorage.removeItem("daily-planner-username");
+          setUserName("");
+          setShowLoginModal(true);
         }
 
         function formatLastSync() {
@@ -581,8 +700,8 @@
                     size={16}
                     style={{ marginRight: "8px", verticalAlign: "middle" }}
                   />
-                  Firebase 실시간 공유 버전입니다. 모든 팀원이 동시에 데이터를
-                  확인하고 수정할 수 있습니다.
+                  Firebase 실시간 공유 버전입니다. 새로고침해도 로그인 상태가
+                  유지됩니다.
                 </div>
               </div>
             </div>
@@ -701,10 +820,7 @@
                 </div>
 
                 <button
-                  onClick={() => {
-                    setUserName("");
-                    setShowLoginModal(true);
-                  }}
+                  onClick={handleLogout}
                   style={{
                     padding: "8px 16px",
                     background: "white",
@@ -948,9 +1064,9 @@
                   overflowY: "auto",
                 }}
               >
-                {!selectedProject ? (
+                {!selectedProject && !selectedDate ? (
+                  // 월간 캘린더 뷰
                   <div>
-                    {/* 전체 프로젝트 대시보드 */}
                     <div
                       style={{
                         background: "white",
@@ -977,11 +1093,12 @@
                           marginTop: "8px",
                         }}
                       >
-                        모든 프로젝트의 업무를 한눈에 확인하세요
+                        월간 캘린더에서 날짜를 클릭하면 해당일의 상세 일정을
+                        확인할 수 있습니다
                       </p>
                     </div>
 
-                    {/* Week Navigation */}
+                    {/* Month Navigation */}
                     <div
                       style={{
                         background: "white",
@@ -995,7 +1112,7 @@
                       }}
                     >
                       <button
-                        onClick={goToPreviousWeek}
+                        onClick={goToPreviousMonth}
                         style={{
                           padding: "10px 20px",
                           background: "#f8f9fa",
@@ -1011,7 +1128,7 @@
                         }}
                       >
                         <Icon name="chevronLeft" size={18} />
-                        이전 주
+                        이전 달
                       </button>
 
                       <div
@@ -1023,25 +1140,17 @@
                       >
                         <div
                           style={{
-                            fontSize: "16px",
-                            fontWeight: "600",
+                            fontSize: "18px",
+                            fontWeight: "700",
                             color: "#1a1a1a",
                           }}
                         >
-                          {currentWeek[0].toLocaleDateString("ko-KR", {
-                            year: "numeric",
-                            month: "long",
-                            day: "numeric",
-                          })}
-                          {" ~ "}
-                          {currentWeek[6].toLocaleDateString("ko-KR", {
-                            month: "long",
-                            day: "numeric",
-                          })}
+                          {currentMonth.getFullYear()}년{" "}
+                          {currentMonth.getMonth() + 1}월
                         </div>
 
                         <button
-                          onClick={goToCurrentWeek}
+                          onClick={goToCurrentMonth}
                           style={{
                             padding: "6px 16px",
                             background:
@@ -1055,12 +1164,12 @@
                             boxShadow: "0 2px 8px rgba(102, 126, 234, 0.3)",
                           }}
                         >
-                          이번 주
+                          이번 달
                         </button>
                       </div>
 
                       <button
-                        onClick={goToNextWeek}
+                        onClick={goToNextMonth}
                         style={{
                           padding: "10px 20px",
                           background: "#f8f9fa",
@@ -1075,12 +1184,230 @@
                           gap: "8px",
                         }}
                       >
-                        다음 주
+                        다음 달
                         <Icon name="chevronRight" size={18} />
                       </button>
                     </div>
 
-                    {/* All Projects Calendar */}
+                    {/* Month Calendar */}
+                    <div
+                      style={{
+                        background: "white",
+                        borderRadius: "12px",
+                        overflow: "hidden",
+                        boxShadow: "0 1px 3px rgba(0,0,0,0.05)",
+                        padding: "16px",
+                      }}
+                    >
+                      {/* Day headers */}
+                      <div
+                        style={{
+                          display: "grid",
+                          gridTemplateColumns: "repeat(7, 1fr)",
+                          marginBottom: "8px",
+                        }}
+                      >
+                        {["일", "월", "화", "수", "목", "금", "토"].map(
+                          (day, idx) => (
+                            <div
+                              key={idx}
+                              style={{
+                                textAlign: "center",
+                                padding: "12px",
+                                fontSize: "14px",
+                                fontWeight: "600",
+                                color:
+                                  idx === 0
+                                    ? "#ff4444"
+                                    : idx === 6
+                                    ? "#4444ff"
+                                    : "#666",
+                              }}
+                            >
+                              {day}
+                            </div>
+                          )
+                        )}
+                      </div>
+
+                      {/* Calendar dates */}
+                      <div
+                        style={{
+                          display: "grid",
+                          gridTemplateColumns: "repeat(7, 1fr)",
+                          gap: "4px",
+                        }}
+                      >
+                        {getMonthDates(currentMonth).map(
+                          ({ date, isCurrentMonth }, idx) => {
+                            const tasks = getTasksForDate(date);
+                            const isToday =
+                              date.toDateString() === new Date().toDateString();
+
+                            return (
+                              <div
+                                key={idx}
+                                onClick={() =>
+                                  isCurrentMonth && setSelectedDate(date)
+                                }
+                                style={{
+                                  minHeight: "100px",
+                                  padding: "8px",
+                                  border: `2px solid ${
+                                    isToday ? "#667eea" : "#e5e7eb"
+                                  }`,
+                                  borderRadius: "8px",
+                                  cursor: isCurrentMonth
+                                    ? "pointer"
+                                    : "default",
+                                  background: isCurrentMonth
+                                    ? isToday
+                                      ? "#f0f7ff"
+                                      : "white"
+                                    : "#fafafa",
+                                  transition: "all 0.2s",
+                                  opacity: isCurrentMonth ? 1 : 0.5,
+                                }}
+                                onMouseEnter={(e) => {
+                                  if (isCurrentMonth) {
+                                    e.currentTarget.style.borderColor =
+                                      "#667eea";
+                                    e.currentTarget.style.boxShadow =
+                                      "0 2px 8px rgba(102, 126, 234, 0.2)";
+                                  }
+                                }}
+                                onMouseLeave={(e) => {
+                                  if (isCurrentMonth && !isToday) {
+                                    e.currentTarget.style.borderColor =
+                                      "#e5e7eb";
+                                    e.currentTarget.style.boxShadow = "none";
+                                  }
+                                }}
+                              >
+                                <div
+                                  style={{
+                                    fontSize: "14px",
+                                    fontWeight: isToday ? "700" : "500",
+                                    color: isToday
+                                      ? "#667eea"
+                                      : isCurrentMonth
+                                      ? "#1a1a1a"
+                                      : "#999",
+                                    marginBottom: "4px",
+                                  }}
+                                >
+                                  {date.getDate()}
+                                </div>
+
+                                <div
+                                  style={{
+                                    display: "flex",
+                                    flexDirection: "column",
+                                    gap: "2px",
+                                  }}
+                                >
+                                  {tasks
+                                    .slice(0, 3)
+                                    .map(({ project, ...task }) => (
+                                      <div
+                                        key={task.id}
+                                        style={{
+                                          fontSize: "10px",
+                                          padding: "2px 4px",
+                                          background: project.color,
+                                          color: "white",
+                                          borderRadius: "3px",
+                                          overflow: "hidden",
+                                          textOverflow: "ellipsis",
+                                          whiteSpace: "nowrap",
+                                          textDecoration:
+                                            task.status === "completed"
+                                              ? "line-through"
+                                              : "none",
+                                        }}
+                                      >
+                                        {task.description}
+                                      </div>
+                                    ))}
+                                  {tasks.length > 3 && (
+                                    <div
+                                      style={{
+                                        fontSize: "10px",
+                                        color: "#666",
+                                        textAlign: "center",
+                                      }}
+                                    >
+                                      +{tasks.length - 3}
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            );
+                          }
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ) : selectedDate ? (
+                  // 일일 뷰
+                  <div>
+                    <div
+                      style={{
+                        background: "white",
+                        padding: "20px 24px",
+                        borderRadius: "12px",
+                        marginBottom: "24px",
+                        boxShadow: "0 1px 3px rgba(0,0,0,0.05)",
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                      }}
+                    >
+                      <div>
+                        <h2
+                          style={{
+                            fontSize: "24px",
+                            fontWeight: "700",
+                            color: "#1a1a1a",
+                            margin: 0,
+                          }}
+                        >
+                          {selectedDate.toLocaleDateString("ko-KR", {
+                            year: "numeric",
+                            month: "long",
+                            day: "numeric",
+                            weekday: "long",
+                          })}
+                        </h2>
+                        <p
+                          style={{
+                            fontSize: "14px",
+                            color: "#666",
+                            marginTop: "4px",
+                          }}
+                        >
+                          일일 상세 일정
+                        </p>
+                      </div>
+
+                      <button
+                        onClick={() => setSelectedDate(null)}
+                        style={{
+                          padding: "8px 16px",
+                          background: "#f1f3f5",
+                          border: "none",
+                          borderRadius: "8px",
+                          fontSize: "14px",
+                          fontWeight: "600",
+                          cursor: "pointer",
+                          color: "#666",
+                        }}
+                      >
+                        ← 캘린더로
+                      </button>
+                    </div>
+
+                    {/* Daily Schedule */}
                     <div
                       style={{
                         background: "white",
@@ -1089,171 +1416,197 @@
                         boxShadow: "0 1px 3px rgba(0,0,0,0.05)",
                       }}
                     >
-                      <div
-                        style={{
-                          display: "grid",
-                          gridTemplateColumns: "80px repeat(7, 1fr)",
-                          background: "#f8f9fa",
-                          borderBottom: "2px solid #e5e7eb",
-                        }}
-                      >
-                        <div
-                          style={{
-                            padding: "16px",
-                            borderRight: "1px solid #e5e7eb",
-                            fontSize: "13px",
-                            fontWeight: "600",
-                            color: "#666",
-                          }}
-                        >
-                          시간
-                        </div>
-                        {currentWeek.map((date, idx) => {
-                          const isToday =
-                            date.toDateString() === new Date().toDateString();
-                          const dayNames = [
-                            "일",
-                            "월",
-                            "화",
-                            "수",
-                            "목",
-                            "금",
-                            "토",
-                          ];
-
-                          return (
-                            <div
-                              key={idx}
-                              style={{
-                                padding: "16px 8px",
-                                textAlign: "center",
-                                borderRight:
-                                  idx < 6 ? "1px solid #e5e7eb" : "none",
-                                background: isToday ? "#667eea" : "transparent",
-                                color: isToday ? "white" : "#1a1a1a",
-                              }}
-                            >
-                              <div
-                                style={{
-                                  fontSize: "12px",
-                                  fontWeight: "500",
-                                  opacity: isToday ? 1 : 0.7,
-                                  marginBottom: "4px",
-                                }}
-                              >
-                                {dayNames[date.getDay()]}
-                              </div>
-                              <div
-                                style={{
-                                  fontSize: "16px",
-                                  fontWeight: "700",
-                                }}
-                              >
-                                {date.getDate()}
-                              </div>
-                            </div>
+                      {workHours.map((hour) => {
+                        const hourTasks = projects.flatMap((project) => {
+                          const dateStr = selectedDate
+                            .toISOString()
+                            .split("T")[0];
+                          const projectTasks = (project.tasks || []).filter(
+                            (t) => t.date === dateStr && t.hour === hour
                           );
-                        })}
-                      </div>
+                          return projectTasks.map((task) => ({
+                            ...task,
+                            project,
+                          }));
+                        });
 
-                      {workHours.map((hour) => (
-                        <div
-                          key={hour}
-                          style={{
-                            display: "grid",
-                            gridTemplateColumns: "80px repeat(7, 1fr)",
-                            borderBottom: "1px solid #e5e7eb",
-                          }}
-                        >
+                        return (
                           <div
+                            key={hour}
                             style={{
-                              padding: "12px 16px",
-                              borderRight: "1px solid #e5e7eb",
-                              fontSize: "14px",
-                              fontWeight: "500",
-                              color: "#666",
-                              background: "#fafafa",
+                              borderBottom: "1px solid #e5e7eb",
+                              padding: "16px 24px",
                             }}
                           >
-                            {hour}:00
-                          </div>
+                            <div
+                              style={{
+                                fontSize: "16px",
+                                fontWeight: "600",
+                                color: "#667eea",
+                                marginBottom: "12px",
+                              }}
+                            >
+                              {hour}:00
+                            </div>
 
-                          {currentWeek.map((date, idx) => {
-                            // 모든 프로젝트의 해당 시간 업무 가져오기
-                            const allTasks = projects.flatMap((project) => {
-                              const dateStr = date.toISOString().split("T")[0];
-                              const projectTasks = (project.tasks || []).filter(
-                                (t) => t.date === dateStr && t.hour === hour
-                              );
-                              return projectTasks.map((task) => ({
-                                ...task,
-                                project,
-                              }));
-                            });
-
-                            return (
+                            {hourTasks.length === 0 ? (
                               <div
-                                key={idx}
                                 style={{
-                                  padding: "8px",
-                                  borderRight:
-                                    idx < 6 ? "1px solid #e5e7eb" : "none",
-                                  minHeight: "60px",
-                                  background: "white",
+                                  fontSize: "14px",
+                                  color: "#999",
+                                  fontStyle: "italic",
                                 }}
                               >
-                                {allTasks.map(({ project, ...task }) => (
+                                예정된 업무 없음
+                              </div>
+                            ) : (
+                              <div
+                                style={{
+                                  display: "flex",
+                                  flexDirection: "column",
+                                  gap: "8px",
+                                }}
+                              >
+                                {hourTasks.map(({ project, ...task }) => (
                                   <div
                                     key={task.id}
-                                    onClick={() => setSelectedProject(project)}
                                     style={{
-                                      background: project.color,
-                                      color: "white",
-                                      padding: "6px 8px",
-                                      borderRadius: "6px",
-                                      fontSize: "11px",
-                                      marginBottom: "4px",
-                                      cursor: "pointer",
-                                      transition: "transform 0.2s",
-                                      textDecoration:
-                                        task.status === "completed"
-                                          ? "line-through"
-                                          : "none",
-                                      opacity:
-                                        task.status === "completed" ? 0.7 : 1,
+                                      padding: "12px",
+                                      background: `${project.color}15`,
+                                      borderLeft: `4px solid ${project.color}`,
+                                      borderRadius: "8px",
                                     }}
-                                    onMouseEnter={(e) =>
-                                      (e.currentTarget.style.transform =
-                                        "scale(1.02)")
-                                    }
-                                    onMouseLeave={(e) =>
-                                      (e.currentTarget.style.transform =
-                                        "scale(1)")
-                                    }
                                   >
                                     <div
                                       style={{
-                                        fontWeight: "600",
-                                        marginBottom: "2px",
-                                        fontSize: "10px",
-                                        opacity: 0.9,
+                                        display: "flex",
+                                        justifyContent: "space-between",
+                                        alignItems: "start",
+                                        marginBottom: "8px",
                                       }}
                                     >
-                                      {project.name}
+                                      <div style={{ flex: 1 }}>
+                                        <div
+                                          style={{
+                                            fontSize: "12px",
+                                            color: project.color,
+                                            fontWeight: "600",
+                                            marginBottom: "4px",
+                                          }}
+                                        >
+                                          {project.name}
+                                        </div>
+                                        <div
+                                          onClick={() =>
+                                            updateTask(project.id, task.id, {
+                                              status:
+                                                task.status === "completed"
+                                                  ? "pending"
+                                                  : "completed",
+                                            })
+                                          }
+                                          style={{
+                                            fontSize: "15px",
+                                            color: "#1a1a1a",
+                                            cursor: "pointer",
+                                            textDecoration:
+                                              task.status === "completed"
+                                                ? "line-through"
+                                                : "none",
+                                            opacity:
+                                              task.status === "completed"
+                                                ? 0.6
+                                                : 1,
+                                          }}
+                                        >
+                                          {task.description}
+                                        </div>
+                                        {task.memo && (
+                                          <div
+                                            style={{
+                                              fontSize: "13px",
+                                              color: "#666",
+                                              marginTop: "8px",
+                                              padding: "8px",
+                                              background: "white",
+                                              borderRadius: "4px",
+                                            }}
+                                          >
+                                            📝 {task.memo}
+                                          </div>
+                                        )}
+                                      </div>
+
+                                      <div
+                                        style={{
+                                          display: "flex",
+                                          gap: "4px",
+                                        }}
+                                      >
+                                        <button
+                                          onClick={() =>
+                                            openMemoModal(project.id, task)
+                                          }
+                                          style={{
+                                            background: "white",
+                                            border: "1px solid #e5e7eb",
+                                            borderRadius: "6px",
+                                            cursor: "pointer",
+                                            padding: "6px",
+                                            display: "flex",
+                                            alignItems: "center",
+                                          }}
+                                          title="메모"
+                                        >
+                                          <Icon
+                                            name="edit"
+                                            size={14}
+                                            color={project.color}
+                                          />
+                                        </button>
+                                        <button
+                                          onClick={() =>
+                                            deleteTask(project.id, task.id)
+                                          }
+                                          style={{
+                                            background: "white",
+                                            border: "1px solid #e5e7eb",
+                                            borderRadius: "6px",
+                                            cursor: "pointer",
+                                            padding: "6px",
+                                            display: "flex",
+                                            alignItems: "center",
+                                          }}
+                                          title="삭제"
+                                        >
+                                          <Icon
+                                            name="trash"
+                                            size={14}
+                                            color="#ff4444"
+                                          />
+                                        </button>
+                                      </div>
                                     </div>
-                                    <div style={{ wordBreak: "break-word" }}>
-                                      {task.description}
+
+                                    <div
+                                      style={{
+                                        fontSize: "11px",
+                                        color: "#999",
+                                      }}
+                                    >
+                                      작성: {task.createdBy}
                                     </div>
                                   </div>
                                 ))}
                               </div>
-                            );
-                          })}
-                        </div>
-                      ))}
+                            )}
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
                 ) : (
+                  // 프로젝트 선택 시 주간 캘린더 (기존 코드)
                   <div>
                     <div
                       style={{
@@ -1404,7 +1757,7 @@
                       </button>
                     </div>
 
-                    {/* Calendar */}
+                    {/* Week Calendar */}
                     <div
                       style={{
                         background: "white",
@@ -1457,7 +1810,9 @@
                                   ? selectedProject.color
                                   : "transparent",
                                 color: isToday ? "white" : "#1a1a1a",
+                                cursor: "pointer",
                               }}
+                              onClick={() => setSelectedDate(date)}
                             >
                               <div
                                 style={{
@@ -1578,27 +1933,58 @@
                                         }}
                                       >
                                         {task.description}
+                                        {task.memo && (
+                                          <div
+                                            style={{
+                                              fontSize: "10px",
+                                              marginTop: "2px",
+                                              opacity: 0.8,
+                                            }}
+                                          >
+                                            📝
+                                          </div>
+                                        )}
                                       </div>
-                                      <button
-                                        onClick={() =>
-                                          deleteTask(
-                                            selectedProject.id,
-                                            task.id
-                                          )
-                                        }
-                                        style={{
-                                          background: "rgba(255,255,255,0.2)",
-                                          border: "none",
-                                          borderRadius: "4px",
-                                          cursor: "pointer",
-                                          padding: "2px",
-                                          display: "flex",
-                                          alignItems: "center",
-                                          justifyContent: "center",
-                                        }}
+                                      <div
+                                        style={{ display: "flex", gap: "2px" }}
                                       >
-                                        <Icon name="trash" size={12} />
-                                      </button>
+                                        <button
+                                          onClick={() =>
+                                            openMemoModal(
+                                              selectedProject.id,
+                                              task
+                                            )
+                                          }
+                                          style={{
+                                            background: "rgba(255,255,255,0.2)",
+                                            border: "none",
+                                            borderRadius: "4px",
+                                            cursor: "pointer",
+                                            padding: "2px",
+                                            display: "flex",
+                                          }}
+                                        >
+                                          <Icon name="edit" size={10} />
+                                        </button>
+                                        <button
+                                          onClick={() =>
+                                            deleteTask(
+                                              selectedProject.id,
+                                              task.id
+                                            )
+                                          }
+                                          style={{
+                                            background: "rgba(255,255,255,0.2)",
+                                            border: "none",
+                                            borderRadius: "4px",
+                                            cursor: "pointer",
+                                            padding: "2px",
+                                            display: "flex",
+                                          }}
+                                        >
+                                          <Icon name="trash" size={10} />
+                                        </button>
+                                      </div>
                                     </div>
                                     {task.createdBy && (
                                       <div
@@ -1608,7 +1994,7 @@
                                           marginTop: "2px",
                                         }}
                                       >
-                                        작성: {task.createdBy}
+                                        {task.createdBy}
                                       </div>
                                     )}
                                   </div>
@@ -1863,6 +2249,127 @@
                 </div>
               </div>
             )}
+
+            {showMemoModal && selectedTask && (
+              <div
+                style={{
+                  position: "fixed",
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  background: "rgba(0,0,0,0.5)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  zIndex: 1000,
+                  animation: "fadeIn 0.2s",
+                }}
+                onClick={() => setShowMemoModal(false)}
+              >
+                <div
+                  style={{
+                    background: "white",
+                    borderRadius: "16px",
+                    padding: "32px",
+                    maxWidth: "480px",
+                    width: "90%",
+                    boxShadow: "0 20px 60px rgba(0,0,0,0.3)",
+                    animation: "slideUp 0.3s",
+                  }}
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <h2
+                    style={{
+                      fontSize: "24px",
+                      fontWeight: "700",
+                      marginBottom: "8px",
+                      color: "#1a1a1a",
+                    }}
+                  >
+                    업무 메모
+                  </h2>
+                  <p
+                    style={{
+                      color: "#666",
+                      marginBottom: "8px",
+                      fontSize: "14px",
+                    }}
+                  >
+                    {selectedTask.task.description}
+                  </p>
+                  <p
+                    style={{
+                      color: "#999",
+                      marginBottom: "24px",
+                      fontSize: "12px",
+                    }}
+                  >
+                    추가 메모나 참고사항을 입력하세요
+                  </p>
+
+                  <textarea
+                    value={taskMemo}
+                    onChange={(e) => setTaskMemo(e.target.value)}
+                    placeholder="메모를 입력하세요..."
+                    autoFocus
+                    style={{
+                      width: "100%",
+                      padding: "14px 16px",
+                      border: "2px solid #e0e0e0",
+                      borderRadius: "12px",
+                      fontSize: "16px",
+                      marginBottom: "24px",
+                      outline: "none",
+                      minHeight: "150px",
+                      resize: "vertical",
+                      fontFamily: "inherit",
+                    }}
+                  />
+
+                  <div
+                    style={{
+                      display: "flex",
+                      gap: "12px",
+                      justifyContent: "flex-end",
+                    }}
+                  >
+                    <button
+                      onClick={() => setShowMemoModal(false)}
+                      style={{
+                        padding: "12px 24px",
+                        background: "#f1f3f5",
+                        border: "none",
+                        borderRadius: "10px",
+                        fontSize: "15px",
+                        fontWeight: "600",
+                        cursor: "pointer",
+                        color: "#666",
+                      }}
+                    >
+                      취소
+                    </button>
+                    <button
+                      onClick={handleSaveMemo}
+                      style={{
+                        padding: "12px 24px",
+                        background:
+                          "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+                        border: "none",
+                        borderRadius: "10px",
+                        fontSize: "15px",
+                        fontWeight: "600",
+                        cursor: "pointer",
+                        color: "white",
+                        boxShadow: "0 4px 12px rgba(102, 126, 234, 0.3)",
+                      }}
+                    >
+                      저장
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         );
       };
@@ -1871,4 +2378,3 @@
     </script>
   </body>
 </html>
-

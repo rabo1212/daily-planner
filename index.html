@@ -939,7 +939,7 @@
                     }}>프로젝트를 추가해주세요</p>
                   </div>
                 ) : (
-                  {projects.map(project => {
+                  projects.map(project => {
                     const progress = getProjectProgress(project);
                     const isSelected = selectedProject?.id === project.id;
                     

@@ -287,6 +287,15 @@
         const [selectedTask, setSelectedTask] = useState(null);
         const [taskMemo, setTaskMemo] = useState("");
         const [lastSync, setLastSync] = useState(new Date());
+        const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
+
+        useEffect(() => {
+          const handleResize = () => {
+            setIsMobile(window.innerWidth <= 768);
+          };
+          window.addEventListener("resize", handleResize);
+          return () => window.removeEventListener("resize", handleResize);
+        }, []);
 
         const workHours = Array.from({ length: 10 }, (_, i) => i + 9);
 
@@ -959,9 +968,10 @@
             </div>
 
             <div style={{ display: "flex", height: "calc(100vh - 73px)" }}>
+             {!isMobile && (
               {/* Left Sidebar */}
               <div
-                style={{
+      style={{
                   width: "320px",
                   background: "white",
                   borderRight: "1px solid #e5e7eb",
@@ -1249,6 +1259,7 @@
                   </div>
                 )}
               </div>
+              )}
 
               {/* Right Panel */}
               <div
